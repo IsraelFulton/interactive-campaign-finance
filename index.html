@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flip an Election With Spending — Limiting Factors</title>
+<meta name="description" content="An interactive model: how much spending does it take to flip an election? And how much does real-time disclosure claw back?">
+<meta property="og:title" content="Flip an Election With Spending">
+<meta property="og:description" content="An interactive model of channel dominance and disclosure in elections.">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --ink-soft: #2e2e2e;
+    --ink-mute: #6b6b6b;
+    --ink-faint: #a0a0a0;
+    --paper: #fbfaf7;
+    --paper-shade: #f3f1ea;
+    --rule: #d9d4c7;
+    --accent: #8b2c2c;
+    --highlight: #f0e7d8;
+    --gain: #2d5c3a;
+    --loss: #8b2c2c;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 18px;
+    line-height: 1.6;
+    font-variation-settings: "opsz" 14;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .masthead {
+    border-bottom: 1px solid var(--rule);
+    padding: 22px 0 18px;
+    text-align: center;
+    background: var(--paper);
+  }
+  .masthead a {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    text-decoration: none;
+    transition: color 150ms ease;
+  }
+  .masthead a:hover { color: var(--ink); }
+
+  main {
+    max-width: 760px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 50px 28px 60px;
+    flex: 1;
+  }
+
+  .eyebrow {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 18px;
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-variation-settings: "opsz" 144, "wght" 600;
+    font-size: clamp(32px, 5vw, 46px);
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+    margin-bottom: 20px;
+  }
+
+  .deck {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-variation-settings: "opsz" 36;
+    font-size: 19px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    margin-bottom: 36px;
+    max-width: 600px;
+  }
+
+  .lead {
+    font-size: 17px;
+    line-height: 1.65;
+    color: var(--ink-soft);
+    margin-bottom: 14px;
+    max-width: 640px;
+  }
+  .lead em, .lead i { font-style: italic; }
+
+  /* =================================
+     CALCULATOR — same as inline version
+     ================================= */
+  .calc {
+    background: var(--paper-shade);
+    border: 1px solid var(--rule);
+    padding: 32px 28px;
+    margin: 36px 0 32px;
+    font-family: 'Inter', sans-serif;
+  }
+  @media (min-width: 720px) {
+    .calc { padding: 36px 36px; }
+  }
+
+  .calc .eyebrow {
+    margin-bottom: 14px;
+    color: var(--accent);
+  }
+  .calc-title {
+    font-family: 'Fraunces', serif;
+    font-variation-settings: "opsz" 36, "wght" 600;
+    font-size: 24px;
+    line-height: 1.2;
+    margin-bottom: 10px;
+    color: var(--ink);
+  }
+  .calc-intro {
+    font-family: 'Fraunces', serif;
+    font-size: 16px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    margin-bottom: 26px;
+    max-width: 540px;
+  }
+
+  .bars {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-around;
+    height: 220px;
+    margin: 28px 0 14px;
+    padding: 0 10px;
+    border-bottom: 2px solid var(--ink);
+    position: relative;
+  }
+  .bar-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+    margin: 0 6px;
+    position: relative;
+  }
+  .bar {
+    width: 100%;
+    background: var(--ink-soft);
+    transition: height 360ms cubic-bezier(.2,.7,.2,1), background 360ms ease;
+    position: relative;
+    min-height: 2px;
+  }
+  .bar.winner {
+    background: var(--accent);
+  }
+  .bar-pct {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    position: absolute;
+    top: -24px;
+    left: 0; right: 0;
+    text-align: center;
+  }
+  .bar-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 10px;
+    letter-spacing: 0.02em;
+    text-align: center;
+  }
+  .bar-sub {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    color: var(--ink-mute);
+    letter-spacing: 0.04em;
+    margin-top: 2px;
+    text-align: center;
+  }
+
+  .winner-callout {
+    text-align: center;
+    margin: 18px 0 26px;
+    font-family: 'Fraunces', serif;
+    font-size: 17px;
+    color: var(--ink-soft);
+    min-height: 1.5em;
+  }
+  .winner-callout strong {
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .winner-callout.flipped strong {
+    color: var(--accent);
+  }
+
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    margin-top: 26px;
+    padding-top: 24px;
+    border-top: 1px solid var(--rule);
+  }
+
+  .slider-block label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--ink);
+  }
+  .slider-block label .val {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--accent);
+  }
+  .slider-block .hint {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    color: var(--ink-mute);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+  .demo-btn {
+    display: inline-block;
+    margin: 8px 0 0 0;
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    letter-spacing: 0.01em;
+  }
+  .demo-btn:hover { color: var(--ink); }
+  .demo-btn:disabled { opacity: 0.5; cursor: default; text-decoration: none; }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--rule);
+    outline: none;
+    border-radius: 2px;
+    cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 3px solid var(--paper);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    transition: transform 150ms ease;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+  input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 3px solid var(--paper);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--paper);
+    padding: 14px 16px;
+    border: 1px solid var(--rule);
+  }
+  .toggle-row .toggle-text {
+    flex: 1;
+  }
+  .toggle-row .toggle-text .t-title {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .toggle-row .toggle-text .t-sub {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    color: var(--ink-mute);
+    margin-top: 2px;
+    line-height: 1.45;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 46px;
+    height: 26px;
+    flex-shrink: 0;
+  }
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+  }
+  .switch .slider-bg {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--ink-faint);
+    border-radius: 26px;
+    cursor: pointer;
+    transition: background 200ms ease;
+    display: block;
+  }
+  .switch .slider-bg::before {
+    content: "";
+    position: absolute;
+    height: 20px; width: 20px;
+    left: 3px; top: 3px;
+    background: #ffffff;
+    border-radius: 50%;
+    transition: transform 200ms ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .switch input:checked + .slider-bg { background: var(--gain); }
+  .switch input:checked + .slider-bg::before { transform: translateX(20px); }
+
+  .calc-readout {
+    margin-top: 22px;
+    padding: 16px 18px;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+  }
+  .calc-readout .k { color: var(--ink); font-weight: 600; }
+  .calc-readout code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: var(--paper-shade);
+    padding: 1px 5px;
+    color: var(--accent);
+  }
+
+  /* "About this model" disclosure */
+  .about {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--rule);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+  .about h2 {
+    font-family: 'Fraunces', serif;
+    font-variation-settings: "opsz" 48, "wght" 600;
+    font-size: 22px;
+    color: var(--ink);
+    margin-bottom: 14px;
+    letter-spacing: -0.005em;
+  }
+  .about p { margin-bottom: 12px; max-width: 640px; }
+  .about p:last-child { margin-bottom: 0; }
+  .about em, .about i { font-style: italic; }
+  .about a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+  .about code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    background: var(--paper-shade);
+    padding: 1px 5px;
+    border-radius: 2px;
+  }
+
+  .article-link {
+    display: inline-block;
+    margin-top: 18px;
+    padding: 12px 18px;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-decoration: none;
+    transition: background 150ms ease;
+  }
+  .article-link:hover { background: var(--accent); }
+
+  footer {
+    border-top: 1px solid var(--rule);
+    padding: 24px 28px;
+    text-align: center;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    color: var(--ink-mute);
+    letter-spacing: 0.04em;
+  }
+  footer a { color: var(--ink-mute); text-decoration: underline; text-underline-offset: 2px; }
+  footer a:hover { color: var(--ink); }
+
+  @media (max-width: 520px) {
+    body { font-size: 17px; }
+    main { padding: 36px 22px 50px; }
+    .deck { font-size: 17px; }
+    .bars { height: 180px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <a href="https://limitingfactors.substack.com" target="_blank" rel="noopener">Limiting Factors</a>
+</header>
+
+<main>
+  <div class="eyebrow">Interactive · Campaign Finance</div>
+
+  <h1>Flip an Election With Spending</h1>
+
+  <p class="deck">
+    A stylized model of how concentrated political spending shifts electoral outcomes — and how real-time disclosure claws those shifts back.
+  </p>
+
+  <p class="lead">
+    Three candidates. Under normal conditions of open discourse, Candidate C wins 40–30–30. Now let one well-capitalized spender saturate the information environment with messages for Candidate A. How much does it take?
+  </p>
+  <p class="lead">
+    Move the slider. Then turn on real-time disclosure and see what changes.
+  </p>
+
+  <!-- ================= CALCULATOR ================= -->
+  <section class="calc" aria-label="Election calculator">
+    <div class="eyebrow">Try it</div>
+
+    <div class="bars" id="bars">
+      <div class="bar-wrap">
+        <span class="bar-pct" id="pctA">30%</span>
+        <div class="bar" id="barA" style="height: 60%;"></div>
+        <div class="bar-label">A</div>
+        <div class="bar-sub">(funded)</div>
+      </div>
+      <div class="bar-wrap">
+        <span class="bar-pct" id="pctB">30%</span>
+        <div class="bar" id="barB" style="height: 60%;"></div>
+        <div class="bar-label">B</div>
+        <div class="bar-sub">&nbsp;</div>
+      </div>
+      <div class="bar-wrap">
+        <span class="bar-pct" id="pctC">40%</span>
+        <div class="bar winner" id="barC" style="height: 80%;"></div>
+        <div class="bar-label">C</div>
+        <div class="bar-sub">(deliberative winner)</div>
+      </div>
+    </div>
+
+    <div class="winner-callout" id="callout">Without spending, <strong>Candidate C</strong> would win 40–30–30.</div>
+
+    <div class="controls">
+      <div class="slider-block">
+        <label for="spend">Spending by dominant backer of A <span class="val" id="spendVal">$0M</span></label>
+        <input type="range" id="spend" min="0" max="300" value="0" step="5">
+        <div class="hint">Diminishing-returns persuasion: each additional dollar moves fewer voters than the last.<br><button type="button" id="demoBtn" class="demo-btn">See how little it takes to flip the outcome →</button></div>
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle-text">
+          <div class="t-title">Real-time disclosure + counter-speech</div>
+          <div class="t-sub">When spending is visible immediately, opposing voices and press scrutiny mobilize. Persuasion yield drops.</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="disclosure">
+          <span class="slider-bg"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="calc-readout" id="readout">
+      <span class="k">δ(s)</span> = the share of the electorate shifted toward A. Uses <code>α(1 − e<sup>−βs</sup>)</code> with α = 0.22, β = 0.012. Disclosure multiplies δ by (1 − λ), where λ = 0.85.
+    </div>
+  </section>
+  <!-- ================ /CALCULATOR ================ -->
+
+  <section class="about">
+    <h2>About this model</h2>
+    <p>
+      This is a deliberately simple model. The persuasion function <em>δ(s) = α(1 − e<sup>−βs</sup>)</em> caps the share of the electorate any spender can shift, and shows the diminishing returns that political-science field experiments consistently find. Disclosure multiplies that yield by <em>(1 − λ)</em>, modeling the counter-speech and press scrutiny that arrive when spending is visible in real time.
+    </p>
+    <p>
+      The point of the model is not to predict elections. It is to demonstrate something more modest and harder to argue with: that under conservative parameters, concentrated spending can flip a plurality outcome at a small fraction of what a single 2024 donor actually spent — and that real-time disclosure changes the picture entirely.
+    </p>
+    <p>
+      A more rigorous version, with formal derivation of the flip threshold and engagement with the doctrinal landscape since <em>Citizens United</em>, appears in a forthcoming law review article. The argument for a non-academic audience lives at Limiting Factors.
+    </p>
+    <a class="article-link" href="https://limitingfactors.substack.com" target="_blank" rel="noopener">Read the full essay →</a>
+  </section>
+</main>
+
+<footer>
+  Made by Israel Fulton · <a href="https://limitingfactors.substack.com" target="_blank" rel="noopener">Limiting Factors</a>
+</footer>
+
+<script>
+(function() {
+  const spend = document.getElementById('spend');
+  const spendVal = document.getElementById('spendVal');
+  const disclosure = document.getElementById('disclosure');
+  const barA = document.getElementById('barA');
+  const barB = document.getElementById('barB');
+  const barC = document.getElementById('barC');
+  const pctA = document.getElementById('pctA');
+  const pctB = document.getElementById('pctB');
+  const pctC = document.getElementById('pctC');
+  const callout = document.getElementById('callout');
+  const readout = document.getElementById('readout');
+
+  const ALPHA = 0.22;
+  const BETA = 0.012;
+  const LAMBDA = 0.85;
+
+  function compute() {
+    const s = Number(spend.value);
+    const lambda = disclosure.checked ? LAMBDA : 0;
+    const deltaRaw = ALPHA * (1 - Math.exp(-BETA * s));
+    const delta = deltaRaw * (1 - lambda);
+
+    let shareA = 0.30 + delta;
+    let shareC = 0.40 - 0.65 * delta;
+    let shareB = 0.30 - 0.35 * delta;
+
+    const scale = (pct) => (pct * 200) + '%';
+    barA.style.height = scale(shareA);
+    barB.style.height = scale(shareB);
+    barC.style.height = scale(shareC);
+
+    pctA.textContent = Math.round(shareA * 100) + '%';
+    pctB.textContent = Math.round(shareB * 100) + '%';
+    pctC.textContent = Math.round(shareC * 100) + '%';
+
+    const shares = { A: shareA, B: shareB, C: shareC };
+    const winner = Object.keys(shares).reduce((a, b) => shares[a] > shares[b] ? a : b);
+    barA.classList.toggle('winner', winner === 'A');
+    barB.classList.toggle('winner', winner === 'B');
+    barC.classList.toggle('winner', winner === 'C');
+
+    spendVal.textContent = '$' + s + 'M';
+    if (s === 0) {
+      callout.innerHTML = 'Without spending, <strong>Candidate C</strong> would win 40–30–30.';
+      callout.classList.remove('flipped');
+    } else if (winner === 'A') {
+      callout.innerHTML = 'With $' + s + 'M in spending, <strong>Candidate A wins</strong> — not by argument, by volume.';
+      callout.classList.add('flipped');
+    } else if (winner === 'C' && disclosure.checked) {
+      callout.innerHTML = 'Disclosure neutralized the spending. <strong>Candidate C</strong> holds.';
+      callout.classList.remove('flipped');
+    } else {
+      callout.innerHTML = '<strong>Candidate C</strong> is still ahead.';
+      callout.classList.remove('flipped');
+    }
+
+    readout.innerHTML =
+      '<span class="k">δ(s)</span> = <code>' + deltaRaw.toFixed(3) + '</code>' +
+      (disclosure.checked ? ' × (1 − 0.85) = <code>' + delta.toFixed(3) + '</code> effective shift' : '') +
+      '<br>' +
+      (disclosure.checked
+        ? 'With real-time disclosure, even $300M cannot flip the outcome. Counter-speech neutralizes the channel-dominance advantage.'
+        : 'A wins a plurality once δ ≈ 0.06. At conservative parameters, that happens around $30–50M in spending — no majority required.');
+  }
+
+  spend.addEventListener('input', compute);
+  disclosure.addEventListener('change', compute);
+
+  // "See how little it takes" — animates to just past the plurality flip point
+  const demoBtn = document.getElementById('demoBtn');
+  if (demoBtn) {
+    demoBtn.addEventListener('click', () => {
+      disclosure.checked = false;
+      spend.value = 0;
+      compute();
+      demoBtn.disabled = true;
+
+      let flipPoint = 300;
+      for (let s = 0; s <= 300; s += 1) {
+        const d = ALPHA * (1 - Math.exp(-BETA * s));
+        const shareA = 0.30 + d;
+        const shareC = 0.40 - 0.65 * d;
+        if (shareA > shareC) { flipPoint = s; break; }
+      }
+      const target = flipPoint + 5;
+
+      const duration = 7000;
+      const t0 = performance.now();
+      function step(now) {
+        const p = Math.min(1, (now - t0) / duration);
+        const eased = p < 0.75
+          ? 1.78 * p * p
+          : 1 - Math.pow(1 - p, 3) * 0.22;
+        const val = Math.round(target * eased);
+        spend.value = val;
+        compute();
+        if (p < 1) requestAnimationFrame(step);
+        else setTimeout(() => { demoBtn.disabled = false; }, 600);
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
+  compute();
+})();
+</script>
+
+</body>
+</html>
